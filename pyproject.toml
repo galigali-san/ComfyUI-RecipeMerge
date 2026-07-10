@@ -1,0 +1,14 @@
+[project]
+name = "comfyui-recipemerge"
+description = "Elemental (per-UNet-key) model merge nodes for ComfyUI: synth-style knob matrix with sub-element tabs, MBW-style block sliders, text recipes, and shareable merge presets (drag & drop JSON). Independent implementation inspired by SuperMerger's block/elemental merge concept."
+version = "1.0.0"
+license = { file = "LICENSE" }
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/galigali-san/ComfyUI-RecipeMerge"
+
+[tool.comfy]
+PublisherId = "galigali"
+DisplayName = "ComfyUI-RecipeMerge"
+Icon = ""

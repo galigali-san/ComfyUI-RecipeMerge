@@ -1,0 +1,15 @@
+{
+  "type": "recipe_merge_matrix_preset",
+  "version": 1,
+  "name": "体2顔1 顔ガード (SDXL)",
+  "matrix": {
+    "IN04": { "attn1": 0, "attn2": 0, "ff": 0.3, "norm": 0.3, "proj": 0.3, "other": 0.3 },
+    "IN05": { "attn1": 0, "attn2": 0, "ff": 0.3, "norm": 0.3, "proj": 0.3, "other": 0.3 },
+    "IN06": { "attn1": 0, "attn2": 0, "ff": 0.5, "norm": 0.5, "proj": 0.5, "other": 0.5 },
+    "IN07": { "attn1": 0, "attn2": 0, "ff": 0.8, "norm": 0.8, "proj": 0.8, "other": 0.8 },
+    "IN08": { "attn1": 0, "attn2": 0, "ff": 0.8, "norm": 0.8, "proj": 0.8, "other": 0.8 },
+    "M00":  { "attn1": 0, "attn2": 0, "ff": 0.8, "norm": 0.8, "proj": 0.8, "other": 0.8 },
+    "OUT00": { "attn1": 0, "attn2": 0, "ff": 0.5, "norm": 0.5, "proj": 0.5, "other": 0.5 },
+    "OUT01": { "attn1": 0, "attn2": 0, "ff": 0.3, "norm": 0.3, "proj": 0.3, "other": 0.3 }
+  }
+}
