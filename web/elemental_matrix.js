@@ -102,6 +102,44 @@ const FACTORY = {
     }
     return m;
   },
+  PAINT_SOFT_SHADING: () => {
+    const m = {};
+    for (let i = 0; i < 12; i++) {
+      const b = "OUT" + String(i).padStart(2, "0");
+      if (i <= 5) {
+        m[b] = { attn1: 0.2, attn2: 0.2, ff: 0.5, norm: 0.5, proj: 0.5, other: 0.5 };
+      } else {
+        m[b] = { attn1: 0.6, attn2: 0.6, ff: 1.0, norm: 0.9, proj: 0.9, other: 0.9 };
+      }
+    }
+    return m;
+  },
+  PAINT_COLOR_LIGHT: () => {
+    const m = {};
+    for (let i = 0; i < 12; i++) {
+      const b = "OUT" + String(i).padStart(2, "0");
+      if (i <= 5) {
+        m[b] = { attn1: 0.5, attn2: 0.5, ff: 1.0, norm: 0.8, proj: 0.8, other: 1.0 };
+      } else {
+        m[b] = { attn1: 0.2, attn2: 0.2, ff: 0.3, norm: 0.3, proj: 0.3, other: 0.3 };
+      }
+    }
+    return m;
+  },
+  PAINT_FLAT_ANIME: () => {
+    const m = {};
+    for (const b of OUT_BLOCKS) {
+      m[b] = {
+        attn1: 0.3,
+        attn2: 0.3,
+        ff: 0.8,
+        norm: 1.0,
+        proj: 1.0,
+        other: 0.7
+      };
+    }
+    return m;
+  },
 };
 
 // 配布用プリセットJSON(共有ファイル)の検証。ブロック名と数値だけ通す。
