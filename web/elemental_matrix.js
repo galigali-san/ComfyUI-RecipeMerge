@@ -251,7 +251,10 @@ function injectCSS() {
 app.registerExtension({
   name: "galigali.recipemerge.elemental_matrix",
   beforeRegisterNodeDef(nodeType, nodeData) {
-    if (nodeData.name !== "ElementalMatrixMerge") return;
+    // マージ版とLoRA版で同じつまみマトリクスUIを使う
+    const MATRIX_NODES = ["ElementalMatrixMerge", "LoraElementalMatrix"];
+    if (!MATRIX_NODES.includes(nodeData.name)) return;
+    const isLora = nodeData.name === "LoraElementalMatrix";
 
     const onNodeCreated = nodeType.prototype.onNodeCreated;
     nodeType.prototype.onNodeCreated = function () {
@@ -286,6 +289,14 @@ app.registerExtension({
 
       load();
 
+      // LoRA版は「全部1.0=普通に適用」が自然な初期状態。
+      // 新規作成(値が空)のときだけ全つまみを1.0で埋める
+      if (isLora && !Object.keys(state).length) {
+        for (const b of ALL_BLOCKS) {
+          for (const el of ELEMENTS) set(b, el, 1);
+        }
+      }
+
       const root = document.createElement("div");
       root.className = "gg-matrix";
 
@@ -310,7 +321,9 @@ app.registerExtension({
 
       const info = document.createElement("div");
       info.className = "gg-info";
-      info.textContent = "drag=回す / dblclick=0 / wheel=±0.05 / サブつまみ0=親要素に従う";
+      info.textContent = isLora
+        ? "つまみ=LoRA適用強度(全部1=普通の適用) / 0=そのキーに適用しない / サブ0=親に従う"
+        : "drag=回す / dblclick=0 / wheel=±0.05 / サブつまみ0=親要素に従う";
       root.appendChild(info);
 
       let knobs = {}; // "BLOCK|el" -> knob div (現在表示中のぶんだけ)

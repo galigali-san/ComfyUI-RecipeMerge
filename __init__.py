@@ -217,44 +217,92 @@ class LoraElementalApply:
         default, rules = parse_recipe(recipe, sweep_value)
         if not recipe.strip() or default is None:
             default = 1.0
-
-        lora_path = folder_paths.get_full_path_or_raise("loras", lora_name)
-        lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
-        lora = comfy.lora_convert.convert_lora(lora)
-
-        key_map = comfy.lora.model_lora_keys_unet(model.model, {})
-        if clip is not None:
-            key_map = comfy.lora.model_lora_keys_clip(
-                clip.cond_stage_model, key_map)
-        loaded = comfy.lora.load_lora(lora, key_map)
-
-        prefix = "diffusion_model."
-        m = model.clone()
-        total = 0
-        default_hits = 0
-        for k in loaded:
-            if not k.startswith(prefix):
-                continue
-            total += 1
-            ratio, winner = ratio_for_key(k[len(prefix):], default, rules)
-            if winner is None:
-                default_hits += 1
-            else:
-                winner.hits += 1
-            if ratio == 0.0:
-                continue  # このキーにはLoRAを適用しない
-            m.add_patches({k: loaded[k]}, ratio)
-
-        new_clip = None
-        if clip is not None:
-            new_clip = clip.clone()
-            new_clip.add_patches(loaded, strength_clip)
-
-        report = build_report(default, rules, total, default_hits)
-        if total == 0:
-            report = (u"★UNet部分のキーが1つもありません"
-                      u"(テキストエンコーダ専用LoRA?)\n") + report
+        m, new_clip, report = _apply_lora_rules(
+            model, clip, lora_name, default, rules, strength_clip)
         print("[LoraElementalApply] %s\n%s" % (lora_name, report))
+        return (m, new_clip, report)
+
+
+def _apply_lora_rules(model, clip, lora_name, default, rules, strength_clip):
+    """LoRAを読み込み、UNetキーごとにルールで決めた強度で適用する。"""
+    lora_path = folder_paths.get_full_path_or_raise("loras", lora_name)
+    lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
+    lora = comfy.lora_convert.convert_lora(lora)
+
+    key_map = comfy.lora.model_lora_keys_unet(model.model, {})
+    if clip is not None:
+        key_map = comfy.lora.model_lora_keys_clip(
+            clip.cond_stage_model, key_map)
+    loaded = comfy.lora.load_lora(lora, key_map)
+
+    prefix = "diffusion_model."
+    m = model.clone()
+    total = 0
+    default_hits = 0
+    for k in loaded:
+        if not k.startswith(prefix):
+            continue
+        total += 1
+        ratio, winner = ratio_for_key(k[len(prefix):], default, rules)
+        if winner is None:
+            default_hits += 1
+        else:
+            winner.hits += 1
+        if ratio == 0.0:
+            continue  # このキーにはLoRAを適用しない
+        m.add_patches({k: loaded[k]}, ratio)
+
+    new_clip = None
+    if clip is not None:
+        new_clip = clip.clone()
+        new_clip.add_patches(loaded, strength_clip)
+
+    report = build_report(default, rules, total, default_hits)
+    if total == 0:
+        report = (u"★UNet部分のキーが1つもありません"
+                  u"(テキストエンコーダ専用LoRA?)\n") + report
+    return m, new_clip, report
+
+
+class LoraElementalMatrix:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "model": ("MODEL",),
+                "lora_name": (folder_paths.get_filename_list("loras"),),
+                # つまみUI(web/elemental_matrix.js)がJSONで書き込む
+                "matrix": ("STRING", {"default": "{}", "multiline": False}),
+                "strength_clip": ("FLOAT", {
+                    "default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01,
+                    "tooltip": u"テキストエンコーダ部分の適用強度"
+                               u"(clip未接続なら無視)"}),
+            },
+            "optional": {
+                "clip": ("CLIP",),
+            },
+        }
+
+    RETURN_TYPES = ("MODEL", "CLIP", "STRING")
+    RETURN_NAMES = ("model", "clip", "report")
+    FUNCTION = "apply"
+    CATEGORY = "advanced/model_merging"
+    DESCRIPTION = (u"LoRAをブロック×要素のつまみで決めた強度で適用する。"
+                   u"新規作成時は全つまみ1.0(=普通のLoRA適用)。"
+                   u"切りたい要素を0に下げる。つまみ0=そのキーに適用しない。"
+                   u"1超えやマイナスが要るときはRecipe版を使う。")
+
+    def apply(self, model, lora_name, matrix, strength_clip, clip=None):
+        try:
+            data = json.loads(matrix) if matrix.strip() else {}
+        except ValueError:
+            raise ValueError(u"matrixがJSONとして読めません: %.80s" % matrix)
+        if not isinstance(data, dict):
+            raise ValueError(u"matrixはオブジェクトである必要があります")
+        rules = rules_from_matrix(data)
+        m, new_clip, report = _apply_lora_rules(
+            model, clip, lora_name, 0.0, rules, strength_clip)
+        print("[LoraElementalMatrix] %s\n%s" % (lora_name, report))
         return (m, new_clip, report)
 
 
@@ -265,6 +313,7 @@ NODE_CLASS_MAPPINGS = {
     "BlockSlidersMerge": BlockSlidersMerge,
     "ElementalMatrixMerge": ElementalMatrixMerge,
     "LoraElementalApply": LoraElementalApply,
+    "LoraElementalMatrix": LoraElementalMatrix,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -272,4 +321,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "BlockSlidersMerge": "Block Sliders Merge (MBW)",
     "ElementalMatrixMerge": "Elemental Matrix Merge (Knobs)",
     "LoraElementalApply": "LoRA Elemental Apply (Recipe)",
+    "LoraElementalMatrix": "LoRA Elemental Matrix (Knobs)",
 }

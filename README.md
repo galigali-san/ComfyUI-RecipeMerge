@@ -27,6 +27,7 @@ ComfyUIを再起動するだけ。**追加の依存ライブラリは無し**(Co
 | **Block Sliders Merge (MBW)** | MBW風。BASE/IN/M/OUTのスライダーで階層マージ+elemental欄で要素上書き |
 | **Elemental Merge (Recipe)** | 全部テキストレシピで指定。複雑な指定・レシピの保存/使い回しに |
 | **LoRA Elemental Apply (Recipe)** | LoRAを**キー単位の強度**で適用。「質感だけ切る」「attn2だけ効かせる」等のLoRA毒抜きに |
+| **LoRA Elemental Matrix (Knobs)** | 上のつまみ版。**全つまみ1.0スタート**で、切りたい要素を下げていく |
 
 ## Elemental Matrix Merge (Knobs)
 
@@ -101,6 +102,14 @@ LoRAを**UNetのキー単位の強度**で適用する(要素マージのLoRA版
   - `attn2:1.2` + `NOT attn2:0.3` — プロンプト反応だけ強調
   - `attn2:__VAL__` + XYプロット — 「このLoRAはどの要素に効いているか」の効能マップ作りに
 - **注意**: LoRAが持っている要素しか効かない。普通のLoRAは attn1/attn2/ff (のto_q〜to_out/net) だけを学習していて、**normやprojのキーは持っていないことが多い**(LoCon等は conv も持つ)。持っていない要素を指定するとreportに「★一致キーなし」と出る(=書式ミスではなくLoRA側に無い)
+
+### LoRA Elemental Matrix (Knobs)
+
+上のつまみ版。UIはマージ版マトリクスと共通(タブ・サブ要素・プリセット・共有もそのまま使える)だが、意味が1つ違う:
+
+- **新規作成時は全つまみ1.0**(=普通のLoRA適用)。そこから**切りたい要素を下げていく**
+- つまみ0 = そのキーにLoRAを適用しない。全部0にするとLoRA無効
+- つまみは0〜1のみ。1超えやマイナスが要るときはRecipe版を使う
 
 ## 入出力
 
