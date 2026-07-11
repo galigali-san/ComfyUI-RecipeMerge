@@ -311,6 +311,54 @@ class LoraElementalMatrix:
 
 
 # --- LoRA同士のマージ(concat方式) ---
+# diffusers形式のキー名(lora_unet_down_blocks_1_attentions_0_...)を
+# kohya形式(lora_unet_input_blocks_4_1_...)に変換する。
+# 住所の対応: down a,attn b -> input 3a+b+1 (slot1) / resnets -> slot0
+#            mid attn -> middle 1 / mid res b -> middle 2b
+#            up a,attn b -> output 3a+b (slot1) / resnets -> slot0
+_DIFF_RES_RENAME = (
+    ("conv1", "in_layers_2"), ("conv2", "out_layers_3"),
+    ("norm1", "in_layers_0"), ("norm2", "out_layers_0"),
+    ("time_emb_proj", "emb_layers_1"), ("conv_shortcut", "skip_connection"),
+)
+
+
+def _diffusers_to_kohya(name):
+    """lora_unet_ 以降のdiffusers形式の名前をkohya形式に。不可ならNone。"""
+    def res(rest):
+        for a, b in _DIFF_RES_RENAME:
+            if rest.startswith(a):
+                return b + rest[len(a):]
+        return rest
+
+    m = re.match(r"down_blocks_(\d+)_attentions_(\d+)_(.*)$", name)
+    if m:
+        a, b = int(m.group(1)), int(m.group(2))
+        return "input_blocks_%d_1_%s" % (3 * a + b + 1, m.group(3))
+    m = re.match(r"down_blocks_(\d+)_resnets_(\d+)_(.*)$", name)
+    if m:
+        a, b = int(m.group(1)), int(m.group(2))
+        return "input_blocks_%d_0_%s" % (3 * a + b + 1, res(m.group(3)))
+    m = re.match(r"down_blocks_(\d+)_downsamplers_0_conv(.*)$", name)
+    if m:
+        return "input_blocks_%d_0_op%s" % (3 * (int(m.group(1)) + 1),
+                                           m.group(2))
+    m = re.match(r"mid_block_attentions_0_(.*)$", name)
+    if m:
+        return "middle_block_1_%s" % m.group(1)
+    m = re.match(r"mid_block_resnets_(\d+)_(.*)$", name)
+    if m:
+        return "middle_block_%d_%s" % (2 * int(m.group(1)), res(m.group(2)))
+    m = re.match(r"up_blocks_(\d+)_attentions_(\d+)_(.*)$", name)
+    if m:
+        a, b = int(m.group(1)), int(m.group(2))
+        return "output_blocks_%d_1_%s" % (3 * a + b, m.group(3))
+    m = re.match(r"up_blocks_(\d+)_resnets_(\d+)_(.*)$", name)
+    if m:
+        a, b = int(m.group(1)), int(m.group(2))
+        return "output_blocks_%d_0_%s" % (3 * a + b, res(m.group(3)))
+    return None
+
 # kohya形式のキー名(lora_unet_input_blocks_4_1_...)をUNetのドット区切りに戻す。
 # アンダースコアを含むモジュール名は先に保護してから "_"→"." する
 _LORA_PROTECTED_TOKENS = [
@@ -415,16 +463,37 @@ class LoraMergeMatrix:
             raise ValueError(u"matrixがJSONとして読めません: %.80s" % matrix)
         rules = rules_from_matrix(data if isinstance(data, dict) else {})
 
+        notes = []
+
         def load(name):
             path = folder_paths.get_full_path_or_raise("loras", name)
             sd = comfy.utils.load_torch_file(path, safe_load=True)
-            for k in sd:
-                if k.startswith("lora_unet_down_blocks") or \
-                        k.startswith("lora_unet_up_blocks"):
-                    raise ValueError(
-                        u"%s はdiffusers形式のキー名のLoRAです。"
-                        u"このノードはkohya形式(lora_unet_input_blocks等)"
-                        u"のみ対応" % name)
+            # diffusers形式のキー名はkohya形式に変換して取り込む
+            diff = [k for k in sd
+                    if re.match(r"lora_unet_(down_blocks|up_blocks|mid_block)",
+                                k)]
+            if diff:
+                converted = {}
+                dropped = 0
+                for k, v in sd.items():
+                    if k.startswith("lora_unet_"):
+                        nk = _diffusers_to_kohya(k[len("lora_unet_"):])
+                        if nk is None:
+                            m = re.match(
+                                r"lora_unet_(down_blocks|up_blocks|mid_block)",
+                                k)
+                            if m:
+                                dropped += 1
+                                continue  # 変換できないUNetキーは除外
+                            converted[k] = v  # 元からkohya形式ならそのまま
+                        else:
+                            converted["lora_unet_" + nk] = v
+                    else:
+                        converted[k] = v  # TE側はそのまま
+                sd = converted
+                notes.append(u"%s: diffusers形式→kohya形式にキー名を変換"
+                             u"(%d個変換, 変換不可%d個除外)"
+                             % (name, len(diff) - dropped, dropped))
             return _group_lora_keys(sd)
 
         g1 = load(lora1_name)
@@ -526,6 +595,8 @@ class LoraMergeMatrix:
             saved = u"保存: %s" % os.path.basename(path)
 
         report = build_report(0.0, rules, total, default_hits)
+        if notes:
+            report = u"\n".join(notes) + u"\n" + report
         report = (u"%s\n両方にあるキー:%d / lora1のみ:%d / lora2のみ:%d"
                   u" / 比率0で削除:%d / 非対応スキップ:%d / 最大dim:%d\n"
                   u"(比率はlora2の割合。デフォルト0.0=lora1のまま)\n"
