@@ -378,20 +378,37 @@ class LoraMergeMatrix:
                     "tooltip": u"テキストエンコーダ部分のlora2の割合"
                                u"(ブロック分けできないので一律)"}),
                 "filename": ("STRING", {"default": "merged_lora"}),
-            }
+                "save_file": ("BOOLEAN", {
+                    "default": False,
+                    "tooltip": u"ONで新しいLoRAファイルとして保存。"
+                               u"OFFならmodel/clipに直接適用するだけ"
+                               u"(生成しながらつまみを試すモード)"}),
+            },
+            "optional": {
+                "model": ("MODEL",),
+                "clip": ("CLIP",),
+            },
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("report",)
+    RETURN_TYPES = ("MODEL", "CLIP", "STRING")
+    RETURN_NAMES = ("model", "clip", "report")
     FUNCTION = "merge"
     OUTPUT_NODE = True
     CATEGORY = "advanced/model_merging"
-    DESCRIPTION = (u"LoRA同士をキー単位の比率でマージして新しいLoRAファイルを"
-                   u"作る(モデル不要のconcat方式=劣化なし、dimは2つの合計まで"
-                   u"増える)。つまみはlora2の割合(0=lora1のみ/1=lora2のみ)。"
-                   u"出力はlorasフォルダに保存され、どのローダーでも使える。")
+    DESCRIPTION = (u"LoRA同士をキー単位の比率でマージする(モデル不要の"
+                   u"concat方式=劣化なし、dimは2つの合計まで増える)。"
+                   u"つまみはlora2の割合(0=lora1のみ/1=lora2のみ)。"
+                   u"model/clipを繋ぐとマージ結果をその場で適用できるので、"
+                   u"生成しながらつまみを調整→納得したらsave_fileをONにして"
+                   u"lorasフォルダに保存、という流れで使える。")
 
-    def merge(self, lora1_name, lora2_name, matrix, te_ratio, filename):
+    def merge(self, lora1_name, lora2_name, matrix, te_ratio, filename,
+              save_file, model=None, clip=None):
+        if not save_file and model is None:
+            raise ValueError(
+                u"modelが未接続でsave_fileもOFFなので、やることがありません。"
+                u"試し生成するならmodel(とclip)を繋ぐ、"
+                u"ファイルに保存するならsave_fileをONに")
         try:
             data = json.loads(matrix) if matrix.strip() else {}
         except ValueError:
@@ -475,28 +492,48 @@ class LoraMergeMatrix:
         if not out:
             raise ValueError(u"マージ結果が空です(比率が全部0/構成が非対応?)")
 
-        # 保存(同名があれば連番を付ける)
-        safe = re.sub(r'[\\/:*?"<>|]', "_", filename.strip()) or "merged_lora"
-        lora_dir = folder_paths.get_folder_paths("loras")[0]
-        path = os.path.join(lora_dir, safe + ".safetensors")
-        n = 1
-        while os.path.exists(path):
-            path = os.path.join(lora_dir, "%s_%d.safetensors" % (safe, n))
-            n += 1
-        metadata = {"recipemerge": json.dumps(
-            {"lora1": lora1_name, "lora2": lora2_name,
-             "te_ratio": te_ratio, "matrix": data}, ensure_ascii=False)}
-        comfy.utils.save_torch_file(out, path, metadata=metadata)
+        # model/clipが繋がっていれば、マージ結果をその場で適用(試し生成用)
+        new_model = None
+        new_clip = None
+        if model is not None:
+            key_map = comfy.lora.model_lora_keys_unet(model.model, {})
+            if clip is not None:
+                key_map = comfy.lora.model_lora_keys_clip(
+                    clip.cond_stage_model, key_map)
+            loaded = comfy.lora.load_lora(
+                comfy.lora_convert.convert_lora(out), key_map)
+            new_model = model.clone()
+            new_model.add_patches(loaded, 1.0)
+            if clip is not None:
+                new_clip = clip.clone()
+                new_clip.add_patches(loaded, 1.0)
+
+        # save_file ONのときだけファイルに保存(同名があれば連番を付ける)
+        saved = u"(ファイル保存なし: save_file=OFF)"
+        if save_file:
+            safe = re.sub(r'[\\/:*?"<>|]', "_",
+                          filename.strip()) or "merged_lora"
+            lora_dir = folder_paths.get_folder_paths("loras")[0]
+            path = os.path.join(lora_dir, safe + ".safetensors")
+            n = 1
+            while os.path.exists(path):
+                path = os.path.join(lora_dir, "%s_%d.safetensors" % (safe, n))
+                n += 1
+            metadata = {"recipemerge": json.dumps(
+                {"lora1": lora1_name, "lora2": lora2_name,
+                 "te_ratio": te_ratio, "matrix": data}, ensure_ascii=False)}
+            comfy.utils.save_torch_file(out, path, metadata=metadata)
+            saved = u"保存: %s" % os.path.basename(path)
 
         report = build_report(0.0, rules, total, default_hits)
-        report = (u"保存: %s\n両方にあるキー:%d / lora1のみ:%d / lora2のみ:%d"
+        report = (u"%s\n両方にあるキー:%d / lora1のみ:%d / lora2のみ:%d"
                   u" / 比率0で削除:%d / 非対応スキップ:%d / 最大dim:%d\n"
                   u"(比率はlora2の割合。デフォルト0.0=lora1のまま)\n"
-                  % (os.path.basename(path), stats["paired"], stats["only1"],
+                  % (saved, stats["paired"], stats["only1"],
                      stats["only2"], stats["dropped"], stats["skipped"],
                      max_rank)) + report
         print("[LoraMergeMatrix]\n" + report)
-        return (report,)
+        return (new_model, new_clip, report)
 
 
 WEB_DIRECTORY = "./web"
