@@ -140,6 +140,28 @@ const FACTORY = {
     }
     return m;
   },
+  POSE_TRANSFER: () => {
+    const m = {};
+    for (const b of IN_BLOCKS) {
+      m[b] = {
+        attn1: 1.0,
+        attn2: 1.0,
+        ff: 0.0,
+        norm: 0.0,
+        proj: 0.0,
+        other: 0.0
+      };
+    }
+    m["M00"] = {
+      attn1: 1.0,
+      attn2: 1.0,
+      ff: 0.0,
+      norm: 0.0,
+      proj: 0.0,
+      other: 0.0
+    };
+    return m;
+  },
 };
 
 // 配布用プリセットJSON(共有ファイル)の検証。ブロック名と数値だけ通す。
@@ -251,10 +273,12 @@ function injectCSS() {
 app.registerExtension({
   name: "galigali.recipemerge.elemental_matrix",
   beforeRegisterNodeDef(nodeType, nodeData) {
-    // マージ版とLoRA版で同じつまみマトリクスUIを使う
-    const MATRIX_NODES = ["ElementalMatrixMerge", "LoraElementalMatrix"];
+    // マージ版・LoRA適用版・LoRA同士マージ版で同じつまみマトリクスUIを使う
+    const MATRIX_NODES = ["ElementalMatrixMerge", "LoraElementalMatrix",
+                          "LoraMergeMatrix"];
     if (!MATRIX_NODES.includes(nodeData.name)) return;
     const isLora = nodeData.name === "LoraElementalMatrix";
+    const isLoraMerge = nodeData.name === "LoraMergeMatrix";
 
     const onNodeCreated = nodeType.prototype.onNodeCreated;
     nodeType.prototype.onNodeCreated = function () {
@@ -323,6 +347,8 @@ app.registerExtension({
       info.className = "gg-info";
       info.textContent = isLora
         ? "つまみ=LoRA適用強度(全部1=普通の適用) / 0=そのキーに適用しない / サブ0=親に従う"
+        : isLoraMerge
+        ? "つまみ=lora2の割合 (0=lora1のみ / 1=lora2のみ / 0.5=半々)"
         : "drag=回す / dblclick=0 / wheel=±0.05 / サブつまみ0=親要素に従う";
       root.appendChild(info);
 

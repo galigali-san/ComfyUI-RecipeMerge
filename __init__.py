@@ -8,6 +8,10 @@
 """
 
 import json
+import os
+import re
+
+import torch
 
 import folder_paths
 import comfy.lora
@@ -306,6 +310,195 @@ class LoraElementalMatrix:
         return (m, new_clip, report)
 
 
+# --- LoRA同士のマージ(concat方式) ---
+# kohya形式のキー名(lora_unet_input_blocks_4_1_...)をUNetのドット区切りに戻す。
+# アンダースコアを含むモジュール名は先に保護してから "_"→"." する
+_LORA_PROTECTED_TOKENS = [
+    "input_blocks", "output_blocks", "middle_block", "transformer_blocks",
+    "to_q", "to_k", "to_v", "to_out", "proj_in", "proj_out",
+    "in_layers", "out_layers", "emb_layers", "skip_connection",
+    "time_embed", "label_emb",
+]
+
+
+def _lora_name_to_unet_key(name):
+    s = name
+    repl = {}
+    for i, tok in enumerate(_LORA_PROTECTED_TOKENS):
+        ph = "\x00%d\x00" % i
+        if tok in s:
+            s = s.replace(tok, ph)
+            repl[ph] = tok
+    s = s.replace("_", ".")
+    for ph, tok in repl.items():
+        s = s.replace(ph, tok)
+    return s
+
+
+def _group_lora_keys(sd):
+    """{ベース名: {"down": t, "up": t, "alpha": t, ...}} にまとめる。"""
+    groups = {}
+    for k, v in sd.items():
+        for suffix, part in ((".lora_down.weight", "down"),
+                             (".lora_up.weight", "up"),
+                             (".alpha", "alpha"),
+                             (".lora_mid.weight", "mid"),
+                             (".dora_scale", "dora")):
+            if k.endswith(suffix):
+                groups.setdefault(k[:-len(suffix)], {})[part] = v
+                break
+        else:
+            groups.setdefault(k, {})["other"] = v
+    return groups
+
+
+def _concat_side(g, w, downs, ups):
+    """片側のLoRAを重みwでconcat用リストに積む。戻り値=追加したランク数。"""
+    down = g["down"].to(torch.float32)
+    up = g["up"].to(torch.float32)
+    r = down.shape[0]
+    alpha = float(g["alpha"]) if "alpha" in g else float(r)
+    s = (w * alpha / r) ** 0.5
+    downs.append(down * s)
+    ups.append(up * s)
+    return r
+
+
+class LoraMergeMatrix:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "lora1_name": (folder_paths.get_filename_list("loras"),),
+                "lora2_name": (folder_paths.get_filename_list("loras"),),
+                # つまみUI(web/elemental_matrix.js)がJSONで書き込む
+                "matrix": ("STRING", {"default": "{}", "multiline": False}),
+                "te_ratio": ("FLOAT", {
+                    "default": 0.5, "min": 0.0, "max": 1.0, "step": 0.01,
+                    "tooltip": u"テキストエンコーダ部分のlora2の割合"
+                               u"(ブロック分けできないので一律)"}),
+                "filename": ("STRING", {"default": "merged_lora"}),
+            }
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("report",)
+    FUNCTION = "merge"
+    OUTPUT_NODE = True
+    CATEGORY = "advanced/model_merging"
+    DESCRIPTION = (u"LoRA同士をキー単位の比率でマージして新しいLoRAファイルを"
+                   u"作る(モデル不要のconcat方式=劣化なし、dimは2つの合計まで"
+                   u"増える)。つまみはlora2の割合(0=lora1のみ/1=lora2のみ)。"
+                   u"出力はlorasフォルダに保存され、どのローダーでも使える。")
+
+    def merge(self, lora1_name, lora2_name, matrix, te_ratio, filename):
+        try:
+            data = json.loads(matrix) if matrix.strip() else {}
+        except ValueError:
+            raise ValueError(u"matrixがJSONとして読めません: %.80s" % matrix)
+        rules = rules_from_matrix(data if isinstance(data, dict) else {})
+
+        def load(name):
+            path = folder_paths.get_full_path_or_raise("loras", name)
+            sd = comfy.utils.load_torch_file(path, safe_load=True)
+            for k in sd:
+                if k.startswith("lora_unet_down_blocks") or \
+                        k.startswith("lora_unet_up_blocks"):
+                    raise ValueError(
+                        u"%s はdiffusers形式のキー名のLoRAです。"
+                        u"このノードはkohya形式(lora_unet_input_blocks等)"
+                        u"のみ対応" % name)
+            return _group_lora_keys(sd)
+
+        g1 = load(lora1_name)
+        g2 = load(lora2_name)
+
+        out = {}
+        stats = {"paired": 0, "only1": 0, "only2": 0, "skipped": 0,
+                 "dropped": 0}
+        total = 0
+        default_hits = 0
+        max_rank = 0
+
+        for base in sorted(set(g1) | set(g2)):
+            a = g1.get(base)
+            b = g2.get(base)
+            # down/upが揃っていない付随キー(dora等)や特殊構成はスキップ
+            def usable(g):
+                return g is not None and "down" in g and "up" in g \
+                    and "mid" not in g and "dora" not in g
+            if not usable(a) and not usable(b):
+                if (a and set(a) - {"other"}) or (b and set(b) - {"other"}):
+                    stats["skipped"] += 1
+                continue
+
+            if base.startswith("lora_unet_"):
+                key_unet = _lora_name_to_unet_key(base[len("lora_unet_"):])
+                total += 1
+                t, winner = ratio_for_key(key_unet, 0.0, rules)
+                if winner is None:
+                    default_hits += 1
+                else:
+                    winner.hits += 1
+                t = min(max(float(t), 0.0), 1.0)
+            else:
+                t = min(max(float(te_ratio), 0.0), 1.0)
+
+            downs, ups = [], []
+            rank = 0
+            if usable(a) and (1.0 - t) > 0.0:
+                rank += _concat_side(a, 1.0 - t, downs, ups)
+            if usable(b) and t > 0.0:
+                rank += _concat_side(b, t, downs, ups)
+            if not downs:
+                stats["dropped"] += 1  # 比率で片側0になり中身が消えた
+                continue
+            try:
+                new_down = torch.cat(downs, dim=0)
+                new_up = torch.cat(ups, dim=1)
+            except RuntimeError:
+                stats["skipped"] += 1  # 形が合わない(構成違い)
+                continue
+
+            dtype = (a or b)["down"].dtype
+            out[base + ".lora_down.weight"] = new_down.to(dtype)
+            out[base + ".lora_up.weight"] = new_up.to(dtype)
+            out[base + ".alpha"] = torch.tensor(float(rank))
+            max_rank = max(max_rank, rank)
+            if usable(a) and usable(b):
+                stats["paired"] += 1
+            elif usable(a):
+                stats["only1"] += 1
+            else:
+                stats["only2"] += 1
+
+        if not out:
+            raise ValueError(u"マージ結果が空です(比率が全部0/構成が非対応?)")
+
+        # 保存(同名があれば連番を付ける)
+        safe = re.sub(r'[\\/:*?"<>|]', "_", filename.strip()) or "merged_lora"
+        lora_dir = folder_paths.get_folder_paths("loras")[0]
+        path = os.path.join(lora_dir, safe + ".safetensors")
+        n = 1
+        while os.path.exists(path):
+            path = os.path.join(lora_dir, "%s_%d.safetensors" % (safe, n))
+            n += 1
+        metadata = {"recipemerge": json.dumps(
+            {"lora1": lora1_name, "lora2": lora2_name,
+             "te_ratio": te_ratio, "matrix": data}, ensure_ascii=False)}
+        comfy.utils.save_torch_file(out, path, metadata=metadata)
+
+        report = build_report(0.0, rules, total, default_hits)
+        report = (u"保存: %s\n両方にあるキー:%d / lora1のみ:%d / lora2のみ:%d"
+                  u" / 比率0で削除:%d / 非対応スキップ:%d / 最大dim:%d\n"
+                  u"(比率はlora2の割合。デフォルト0.0=lora1のまま)\n"
+                  % (os.path.basename(path), stats["paired"], stats["only1"],
+                     stats["only2"], stats["dropped"], stats["skipped"],
+                     max_rank)) + report
+        print("[LoraMergeMatrix]\n" + report)
+        return (report,)
+
+
 WEB_DIRECTORY = "./web"
 
 NODE_CLASS_MAPPINGS = {
@@ -314,6 +507,7 @@ NODE_CLASS_MAPPINGS = {
     "ElementalMatrixMerge": ElementalMatrixMerge,
     "LoraElementalApply": LoraElementalApply,
     "LoraElementalMatrix": LoraElementalMatrix,
+    "LoraMergeMatrix": LoraMergeMatrix,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -322,4 +516,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ElementalMatrixMerge": "Elemental Matrix Merge (Knobs)",
     "LoraElementalApply": "LoRA Elemental Apply (Recipe)",
     "LoraElementalMatrix": "LoRA Elemental Matrix (Knobs)",
+    "LoraMergeMatrix": "LoRA Merge (Knobs)",
 }
