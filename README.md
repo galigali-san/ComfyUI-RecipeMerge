@@ -225,9 +225,24 @@ python_embeded\python.exe custom_nodes\ComfyUI-RecipeMerge\test_parser.py
 - 比率0はLoRA1、1はLoRA2。全体を半々にする場合はALLタブでSET 0.5。
   テキストエンコーダ部分は `te_ratio` で別に指定します。
 - `model`を繋いで試し生成し、`save_file`をONにするとLoRAを保存します。
-  Anima対応版のComfyUIが必要です。SD系プリセットはAnima階層には適用できません。
+  Anima対応版のComfyUIが必要です。SD系プリセットはAnimaの28階層へ比率を補間して適用します。
 - LoHa/LoKr/DoRA等の特殊形式は従来どおり対象外です。
 
 CPU回帰テスト: `python test_anima_merge.py`（PyTorchが必要）。
 キーの分類と、異なるrank/alphaのconcat結果が重み付きΔW和に一致することを検証します。
 実際のAnimaチェックポイントを読み込んだ画像生成は別途確認してください。
+
+
+### Animaのプリセット
+
+Animaノードでも全14種類の同梱プリセットを選択できます。
+SDのIN00〜M00〜OUT11の25点を深さ方向の曲線として扱い、B00〜B27の28点へ線形補間します。
+BASEはそのまま、欠けている階層・セルは0として扱います。サブ要素も換算対象です。
+これは比率配分の移植であり、SDとAnimaで画風・ポーズ等の効果が同じになる保証はありません。
+
+ユーザープリセットの選択、IMP、ドラッグ＆ドロップでも自動換算します。
+SAVE/EXPではAnima階層の値を保存・書き出しでき、再読み込み時には再換算されません。
+SD階層とAnima階層が混在したファイルは拒否します。Anima用プリセットをSDノードへ適用した場合もエラーを表示します。
+変換前の保存済みユーザープリセットは、選択しただけでは書き換えません。
+
+プリセット回帰テスト: `node test_anima_presets.mjs`。
