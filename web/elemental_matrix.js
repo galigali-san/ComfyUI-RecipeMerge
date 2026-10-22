@@ -5,7 +5,7 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 import { adaptPreset } from "./anima_presets.js";
-import { ANIMA_FACTORY } from "./anima_native_presets.js";
+import { ANIMA_FACTORY, ANIMA_PRESET_LABELS } from "./anima_native_presets.js";
 
 const IN_BLOCKS = [];
 const OUT_BLOCKS = [];
@@ -591,7 +591,7 @@ app.registerExtension({
           const ga = document.createElement("optgroup");
           ga.label = "Anima専用（試作用）";
           sel.appendChild(ga);
-          for (const name of Object.keys(ANIMA_FACTORY)) opt("f:" + name, "★" + name, ga);
+          for (const name of Object.keys(ANIMA_FACTORY)) opt("f:" + name, "★" + (ANIMA_PRESET_LABELS[name] || name), ga);
         }
         const names = Object.keys(userPresets).sort();
         if (names.length) {

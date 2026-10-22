@@ -15,4 +15,13 @@ for (const [name, make] of Object.entries(ANIMA_FACTORY)) {
 assert.equal(ANIMA_FACTORY.ANIMA_EARLY().B00.attn1, .75);
 assert.equal(ANIMA_FACTORY.ANIMA_EARLY().B27.attn1, .15);
 assert.equal(ANIMA_FACTORY.ANIMA_LATE().B27.ff, .75);
-console.log('8 native presets validated; UI/JSON match; curve endpoints verified.');
+for (const [weak, strong] of [['ANIMA_PAINT_SOFT','ANIMA_PAINT_TRANSFER'], ['ANIMA_PAINT_TRANSFER','ANIMA_PAINT_STRONG']]) {
+  for (let i=0;i<28;i++) {
+    const b = 'B'+String(i).padStart(2,'0');
+    assert.ok(ANIMA_FACTORY[weak]()[b].ff < ANIMA_FACTORY[strong]()[b].ff);
+  }
+}
+for (const c of Object.values(ANIMA_FACTORY.ANIMA_PAINT_FACE_GUARD())) {
+  assert.equal(c.attn1, 0); assert.equal(c.attn2, 0);
+}
+console.log(Object.keys(ANIMA_FACTORY).length + ' native presets validated; JSON/UI match; paint strength and attention guards verified.');
