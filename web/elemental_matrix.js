@@ -5,6 +5,7 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 import { adaptPreset } from "./anima_presets.js";
+import { ANIMA_FACTORY } from "./anima_native_presets.js";
 
 const IN_BLOCKS = [];
 const OUT_BLOCKS = [];
@@ -285,6 +286,7 @@ app.registerExtension({
     const isAnima = nodeData.name === "AnimaLoraMergeMatrix";
     const FACTORY = Object.fromEntries(Object.entries(SD_FACTORY).map(
       ([name, make]) => [name, () => adaptPreset(make(), isAnima)]));
+    if (isAnima) Object.assign(FACTORY, ANIMA_FACTORY);
     const isLoraMerge = nodeData.name === "LoraMergeMatrix" || isAnima;
     const IN_BLOCKS = isAnima ? Array.from({length: 14}, (_, i) => "B" + String(i).padStart(2, "0")) : globalInBlocks;
     const OUT_BLOCKS = isAnima ? Array.from({length: 14}, (_, i) => "B" + String(i + 14).padStart(2, "0")) : globalOutBlocks;
@@ -584,7 +586,13 @@ app.registerExtension({
         const gf = document.createElement("optgroup");
         gf.label = isAnima ? "Anima用カーブ(BASE=0 / SD曲線を深さ換算)" : "定番カーブ(BASE=0)";
         sel.appendChild(gf);
-        for (const name of Object.keys(FACTORY)) opt("f:" + name, "★" + name, gf);
+        for (const name of Object.keys(SD_FACTORY)) opt("f:" + name, "★" + name, gf);
+        if (isAnima) {
+          const ga = document.createElement("optgroup");
+          ga.label = "Anima専用（試作用）";
+          sel.appendChild(ga);
+          for (const name of Object.keys(ANIMA_FACTORY)) opt("f:" + name, "★" + name, ga);
+        }
         const names = Object.keys(userPresets).sort();
         if (names.length) {
           const gu = document.createElement("optgroup");
