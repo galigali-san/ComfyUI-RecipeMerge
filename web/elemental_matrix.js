@@ -170,7 +170,7 @@ const sanitizeMatrix = (m) => {
   if (!m || typeof m !== "object") return null;
   const out = {};
   for (const b of Object.keys(m)) {
-    if (!/^(IN|OUT)\d{2}$|^M00$|^BASE$/.test(b)) continue;
+    if (!/^(IN|OUT|B)\d{2}$|^M00$|^BASE$/.test(b)) continue;
     const cells = m[b];
     if (!cells || typeof cells !== "object") continue;
     const oc = {};
@@ -270,15 +270,23 @@ function injectCSS() {
   document.head.appendChild(s);
 }
 
+const globalInBlocks = IN_BLOCKS;
+const globalOutBlocks = OUT_BLOCKS;
+
 app.registerExtension({
   name: "galigali.recipemerge.elemental_matrix",
   beforeRegisterNodeDef(nodeType, nodeData) {
     // マージ版・LoRA適用版・LoRA同士マージ版で同じつまみマトリクスUIを使う
     const MATRIX_NODES = ["ElementalMatrixMerge", "LoraElementalMatrix",
-                          "LoraMergeMatrix"];
+                          "LoraMergeMatrix", "AnimaLoraMergeMatrix"];
     if (!MATRIX_NODES.includes(nodeData.name)) return;
     const isLora = nodeData.name === "LoraElementalMatrix";
-    const isLoraMerge = nodeData.name === "LoraMergeMatrix";
+    const isAnima = nodeData.name === "AnimaLoraMergeMatrix";
+    const isLoraMerge = nodeData.name === "LoraMergeMatrix" || isAnima;
+    const IN_BLOCKS = isAnima ? Array.from({length: 14}, (_, i) => "B" + String(i).padStart(2, "0")) : globalInBlocks;
+    const OUT_BLOCKS = isAnima ? Array.from({length: 14}, (_, i) => "B" + String(i + 14).padStart(2, "0")) : globalOutBlocks;
+    const MID_BLOCKS = isAnima ? ["BASE"] : ["BASE", "M00"];
+    const ALL_BLOCKS = [...IN_BLOCKS, ...OUT_BLOCKS, ...MID_BLOCKS];
 
     const onNodeCreated = nodeType.prototype.onNodeCreated;
     nodeType.prototype.onNodeCreated = function () {
@@ -573,7 +581,7 @@ app.registerExtension({
         const gf = document.createElement("optgroup");
         gf.label = "定番カーブ(BASE=0)";
         sel.appendChild(gf);
-        for (const name of Object.keys(FACTORY)) opt("f:" + name, "★" + name, gf);
+        for (const name of (isAnima ? [] : Object.keys(FACTORY))) opt("f:" + name, "★" + name, gf);
         const names = Object.keys(userPresets).sort();
         if (names.length) {
           const gu = document.createElement("optgroup");

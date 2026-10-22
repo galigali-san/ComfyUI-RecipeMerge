@@ -206,3 +206,28 @@ python_embeded\python.exe custom_nodes\ComfyUI-RecipeMerge\test_parser.py
 - MIT License — Copyright (c) 2026 galigali([LICENSE](LICENSE))
 - インスパイア元: [SuperMerger](https://github.com/hako-mikan/sd-webui-supermerger) (hako-mikan氏) の階層マージ/Elemental Mergeの考え方。本リポジトリはコードを共有しない独立実装で、先方とは無関係
 - 定番カーブ名(GRAD_V, FLAT_25等)は [Merge Block Weighted GUI](https://github.com/bbc-mc/sdweb-merge-block-weighted-gui) 発のコミュニティ慣用名(値は数式から生成)
+
+
+## AnimaのLoRA同士をマージする
+
+`advanced/model_merging` の **LoRA Merge (Anima Knobs)** を使います。
+同じAnimaアーキテクチャ用の通常LoRAを2つ指定してください。
+チェックポイント本体同士のマージや、SDXL用LoRAとAnima用LoRAの混合には使えません。
+
+- `B00`〜`B27`: `blocks.0`〜`blocks.27` のDiTブロック。
+- `BASE`: `llm_adapter`、埋め込み等、DiTブロック以外の拡散モデル部分。
+- `attn1`: `self_attn`、`attn2`: `cross_attn`、`ff`: `mlp`。
+  q/k/v/o_projはto_q/to_k/to_v/to_outサブつまみに対応します。
+- `lora_unet_blocks_...` のkohya形式、および
+  `diffusion_model.blocks....` のドット形式を取り込めます。
+  通常の `.lora_down/up.weight` と `.lora_A/B.weight` に対応します。
+  ドット形式はComfyUI標準ローダーの汎用kohyaキーに正規化して保存します。
+- 比率0はLoRA1、1はLoRA2。全体を半々にする場合はALLタブでSET 0.5。
+  テキストエンコーダ部分は `te_ratio` で別に指定します。
+- `model`を繋いで試し生成し、`save_file`をONにするとLoRAを保存します。
+  Anima対応版のComfyUIが必要です。SD系プリセットはAnima階層には適用できません。
+- LoHa/LoKr/DoRA等の特殊形式は従来どおり対象外です。
+
+CPU回帰テスト: `python test_anima_merge.py`（PyTorchが必要）。
+キーの分類と、異なるrank/alphaのconcat結果が重み付きΔW和に一致することを検証します。
+実際のAnimaチェックポイントを読み込んだ画像生成は別途確認してください。
