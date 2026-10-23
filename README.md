@@ -246,3 +246,10 @@ SD階層とAnima階層が混在したファイルは拒否します。Anima用�
 変換前の保存済みユーザープリセットは、選択しただけでは書き換えません。
 
 プリセット回帰テスト: `node test_anima_presets.mjs`。
+
+
+## Triangle LoRA Merge (Anima / SD)
+
+LoRA Mergeの3入力版を追加しました。A/B/Cの配合を三角形で指定し、階層・要素・サブ要素とTEに別配合を設定できます。
+Anima用途プリセット、配合JSONの保存・読み込み、試し生成、concat形式のLoRA保存に対応します。
+使い方と検証状況は [Triangle Mergeガイド](docs/triangle_merge.md) を参照してください。
