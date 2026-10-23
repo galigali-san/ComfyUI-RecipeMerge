@@ -1,0 +1,239 @@
+{
+  "type": "recipe_merge_matrix_preset",
+  "version": 1,
+  "name": "ANIMA_DETAIL_BLEND",
+  "matrix": {
+    "BASE": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B00": {
+      "attn1": 0.1,
+      "attn2": 0.05,
+      "ff": 0.3,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B01": {
+      "attn1": 0.1,
+      "attn2": 0.05,
+      "ff": 0.31,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B02": {
+      "attn1": 0.11,
+      "attn2": 0.05,
+      "ff": 0.32,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B03": {
+      "attn1": 0.11,
+      "attn2": 0.06,
+      "ff": 0.33,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B04": {
+      "attn1": 0.11,
+      "attn2": 0.06,
+      "ff": 0.34,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B05": {
+      "attn1": 0.12,
+      "attn2": 0.06,
+      "ff": 0.36,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B06": {
+      "attn1": 0.12,
+      "attn2": 0.06,
+      "ff": 0.37,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B07": {
+      "attn1": 0.13,
+      "attn2": 0.06,
+      "ff": 0.38,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B08": {
+      "attn1": 0.13,
+      "attn2": 0.06,
+      "ff": 0.39,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B09": {
+      "attn1": 0.13,
+      "attn2": 0.07,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B10": {
+      "attn1": 0.14,
+      "attn2": 0.07,
+      "ff": 0.41,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B11": {
+      "attn1": 0.14,
+      "attn2": 0.07,
+      "ff": 0.42,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B12": {
+      "attn1": 0.14,
+      "attn2": 0.07,
+      "ff": 0.43,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B13": {
+      "attn1": 0.15,
+      "attn2": 0.07,
+      "ff": 0.44,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B14": {
+      "attn1": 0.15,
+      "attn2": 0.08,
+      "ff": 0.46,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B15": {
+      "attn1": 0.16,
+      "attn2": 0.08,
+      "ff": 0.47,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B16": {
+      "attn1": 0.16,
+      "attn2": 0.08,
+      "ff": 0.48,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B17": {
+      "attn1": 0.16,
+      "attn2": 0.08,
+      "ff": 0.49,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B18": {
+      "attn1": 0.17,
+      "attn2": 0.08,
+      "ff": 0.5,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B19": {
+      "attn1": 0.17,
+      "attn2": 0.09,
+      "ff": 0.51,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B20": {
+      "attn1": 0.17,
+      "attn2": 0.09,
+      "ff": 0.52,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B21": {
+      "attn1": 0.18,
+      "attn2": 0.09,
+      "ff": 0.53,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B22": {
+      "attn1": 0.18,
+      "attn2": 0.09,
+      "ff": 0.54,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B23": {
+      "attn1": 0.19,
+      "attn2": 0.09,
+      "ff": 0.56,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B24": {
+      "attn1": 0.19,
+      "attn2": 0.09,
+      "ff": 0.57,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B25": {
+      "attn1": 0.19,
+      "attn2": 0.1,
+      "ff": 0.58,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B26": {
+      "attn1": 0.2,
+      "attn2": 0.1,
+      "ff": 0.59,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B27": {
+      "attn1": 0.2,
+      "attn2": 0.1,
+      "ff": 0.6,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    }
+  }
+}

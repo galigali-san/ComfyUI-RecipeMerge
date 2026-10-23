@@ -4,6 +4,8 @@
 // 値はJSONで隠しウィジェット "matrix" に保存される。
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
+import { adaptPreset } from "./anima_presets.js";
+import { ANIMA_FACTORY, ANIMA_PRESET_LABELS } from "./anima_native_presets.js";
 
 const IN_BLOCKS = [];
 const OUT_BLOCKS = [];
@@ -78,7 +80,7 @@ const curveMatrix = (fn) => {
   });
   return m;
 };
-const FACTORY = {
+const SD_FACTORY = {
   FLAT_25: () => curveMatrix(() => 0.25),
   FLAT_50: () => curveMatrix(() => 0.5),
   FLAT_75: () => curveMatrix(() => 0.75),
@@ -170,7 +172,7 @@ const sanitizeMatrix = (m) => {
   if (!m || typeof m !== "object") return null;
   const out = {};
   for (const b of Object.keys(m)) {
-    if (!/^(IN|OUT)\d{2}$|^M00$|^BASE$/.test(b)) continue;
+    if (!/^(IN|OUT|B)\d{2}$|^M00$|^BASE$/.test(b)) continue;
     const cells = m[b];
     if (!cells || typeof cells !== "object") continue;
     const oc = {};
@@ -270,15 +272,26 @@ function injectCSS() {
   document.head.appendChild(s);
 }
 
+const globalInBlocks = IN_BLOCKS;
+const globalOutBlocks = OUT_BLOCKS;
+
 app.registerExtension({
   name: "galigali.recipemerge.elemental_matrix",
   beforeRegisterNodeDef(nodeType, nodeData) {
     // マージ版・LoRA適用版・LoRA同士マージ版で同じつまみマトリクスUIを使う
     const MATRIX_NODES = ["ElementalMatrixMerge", "LoraElementalMatrix",
-                          "LoraMergeMatrix"];
+                          "LoraMergeMatrix", "AnimaLoraMergeMatrix"];
     if (!MATRIX_NODES.includes(nodeData.name)) return;
     const isLora = nodeData.name === "LoraElementalMatrix";
-    const isLoraMerge = nodeData.name === "LoraMergeMatrix";
+    const isAnima = nodeData.name === "AnimaLoraMergeMatrix";
+    const FACTORY = Object.fromEntries(Object.entries(SD_FACTORY).map(
+      ([name, make]) => [name, () => adaptPreset(make(), isAnima)]));
+    if (isAnima) Object.assign(FACTORY, ANIMA_FACTORY);
+    const isLoraMerge = nodeData.name === "LoraMergeMatrix" || isAnima;
+    const IN_BLOCKS = isAnima ? Array.from({length: 14}, (_, i) => "B" + String(i).padStart(2, "0")) : globalInBlocks;
+    const OUT_BLOCKS = isAnima ? Array.from({length: 14}, (_, i) => "B" + String(i + 14).padStart(2, "0")) : globalOutBlocks;
+    const MID_BLOCKS = isAnima ? ["BASE"] : ["BASE", "M00"];
+    const ALL_BLOCKS = [...IN_BLOCKS, ...OUT_BLOCKS, ...MID_BLOCKS];
 
     const onNodeCreated = nodeType.prototype.onNodeCreated;
     nodeType.prototype.onNodeCreated = function () {
@@ -571,9 +584,15 @@ app.registerExtension({
         opt("", "PRESET...");
         if (undoState) opt("__undo__", "(適用前に戻す)");
         const gf = document.createElement("optgroup");
-        gf.label = "定番カーブ(BASE=0)";
+        gf.label = isAnima ? "Anima用カーブ(BASE=0 / SD曲線を深さ換算)" : "定番カーブ(BASE=0)";
         sel.appendChild(gf);
-        for (const name of Object.keys(FACTORY)) opt("f:" + name, "★" + name, gf);
+        for (const name of Object.keys(SD_FACTORY)) opt("f:" + name, "★" + name, gf);
+        if (isAnima) {
+          const ga = document.createElement("optgroup");
+          ga.label = "Anima専用（試作用）";
+          sel.appendChild(ga);
+          for (const name of Object.keys(ANIMA_FACTORY)) opt("f:" + name, "★" + (ANIMA_PRESET_LABELS[name] || name), ga);
+        }
         const names = Object.keys(userPresets).sort();
         if (names.length) {
           const gu = document.createElement("optgroup");
@@ -586,6 +605,8 @@ app.registerExtension({
       };
 
       const applyMatrix = (m, name) => {
+        try { m = adaptPreset(m, isAnima); }
+        catch (e) { info.textContent = e.message; return; }
         if (Object.keys(state).length) undoState = JSON.stringify(state);
         state = JSON.parse(JSON.stringify(m));
         save();
@@ -654,7 +675,11 @@ app.registerExtension({
             info.textContent = "JSONとして読めなかった: " + f.name;
             continue;
           }
-          const matrix = sanitizeMatrix(data.matrix || data);
+          let matrix = sanitizeMatrix(data.matrix || data);
+          if (matrix) {
+            try { matrix = adaptPreset(matrix, isAnima); }
+            catch (e) { info.textContent = e.message; continue; }
+          }
           if (!matrix) {
             info.textContent = "プリセットとして読めなかった: " + f.name;
             continue;
@@ -707,6 +732,8 @@ app.registerExtension({
           if (!name) return;
           matrix = JSON.parse(JSON.stringify(state));
         }
+        try { matrix = adaptPreset(matrix, isAnima); }
+        catch (e) { info.textContent = e.message; return; }
         const data = { type: "recipe_merge_matrix_preset", version: 1,
                        name: name, matrix: matrix };
         const blob = new Blob([JSON.stringify(data, null, 2)],
