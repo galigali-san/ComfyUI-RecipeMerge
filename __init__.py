@@ -365,7 +365,9 @@ _LORA_PROTECTED_TOKENS = [
     "input_blocks", "output_blocks", "middle_block", "transformer_blocks",
     "to_q", "to_k", "to_v", "to_out", "proj_in", "proj_out",
     "in_layers", "out_layers", "emb_layers", "skip_connection",
-    "time_embed", "label_emb",
+    "time_embed", "label_emb", "self_attn", "cross_attn",
+    "q_proj", "k_proj", "v_proj", "o_proj", "llm_adapter",
+    "norm_self_attn", "norm_cross_attn", "norm_mlp",
 ]
 
 
@@ -383,11 +385,32 @@ def _lora_name_to_unet_key(name):
     return s
 
 
+def _normalize_anima_keys(sd):
+    """Normalize native Anima diffusion paths; preserve TE and unknown paths."""
+    out = {}
+    for key, value in sd.items():
+        normalized = key
+        if key.startswith("diffusion_model."):
+            for suffix in (".lora_down.weight", ".lora_up.weight",
+                           ".lora_A.weight", ".lora_B.weight", ".alpha",
+                           ".dora_scale", ".lora_mid.weight"):
+                if key.endswith(suffix):
+                    module = key[len("diffusion_model."):-len(suffix)]
+                    normalized = "lora_unet_" + module.replace(".", "_") + suffix
+                    break
+        if normalized in out:
+            raise ValueError("Duplicate LoRA key after normalization: " + normalized)
+        out[normalized] = value
+    return out
+
+
 def _group_lora_keys(sd):
     """{ベース名: {"down": t, "up": t, "alpha": t, ...}} にまとめる。"""
     groups = {}
     for k, v in sd.items():
-        for suffix, part in ((".lora_down.weight", "down"),
+        for suffix, part in ((".lora_A.weight", "down"),
+                             (".lora_B.weight", "up"),
+                             (".lora_down.weight", "down"),
                              (".lora_up.weight", "up"),
                              (".alpha", "alpha"),
                              (".lora_mid.weight", "mid"),
@@ -494,7 +517,7 @@ class LoraMergeMatrix:
                 notes.append(u"%s: diffusers形式→kohya形式にキー名を変換"
                              u"(%d個変換, 変換不可%d個除外)"
                              % (name, len(diff) - dropped, dropped))
-            return _group_lora_keys(sd)
+            return _group_lora_keys(_normalize_anima_keys(sd))
 
         g1 = load(lora1_name)
         g2 = load(lora2_name)
@@ -607,22 +630,36 @@ class LoraMergeMatrix:
         return (new_model, new_clip, report)
 
 
+class AnimaLoraMergeMatrix(LoraMergeMatrix):
+    DESCRIPTION = (u"Anima用LoRAマージ。B00〜B27はDiTブロック、BASEは"
+                   u"llm_adapter等。attn1=自己注意、attn2=クロス注意、ff=MLP。"
+                   u"同じAnimaアーキテクチャの通常LoRA同士を指定してください。")
+
+
+from .triangle_merge import TriangleLoraMerge, PolygonLoraMerge
+
 WEB_DIRECTORY = "./web"
 
 NODE_CLASS_MAPPINGS = {
+    "TriangleLoraMerge": TriangleLoraMerge,
+    "PolygonLoraMerge": PolygonLoraMerge,
     "ElementalMergeRecipe": ElementalMergeRecipe,
     "BlockSlidersMerge": BlockSlidersMerge,
     "ElementalMatrixMerge": ElementalMatrixMerge,
     "LoraElementalApply": LoraElementalApply,
     "LoraElementalMatrix": LoraElementalMatrix,
     "LoraMergeMatrix": LoraMergeMatrix,
+    "AnimaLoraMergeMatrix": AnimaLoraMergeMatrix,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
+    "TriangleLoraMerge": "Triangle LoRA Merge (Anima / SD)",
+    "PolygonLoraMerge": "Polygon LoRA Merge (Dynamic / Anima / SD)",
     "ElementalMergeRecipe": "Elemental Merge (Recipe)",
     "BlockSlidersMerge": "Block Sliders Merge (MBW)",
     "ElementalMatrixMerge": "Elemental Matrix Merge (Knobs)",
     "LoraElementalApply": "LoRA Elemental Apply (Recipe)",
     "LoraElementalMatrix": "LoRA Elemental Matrix (Knobs)",
     "LoraMergeMatrix": "LoRA Merge (Knobs)",
+    "AnimaLoraMergeMatrix": "LoRA Merge (Anima Knobs)",
 }

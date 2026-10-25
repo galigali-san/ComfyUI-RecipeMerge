@@ -1,5 +1,9 @@
 # ComfyUI-RecipeMerge
 
+> **v1.6.0**: Anima LoRA対応、用途別プリセット、Triangle/Polygon LoRA Mergeを標準の`main`に統合しました。
+> Git版はComfyUI-Manager等の通常のGit更新機能で取得できます。更新後はComfyUIを再起動してください。
+> 開発ブランチを使っていた場合は一度だけ`main`へ戻してください。Registry向け公開はGitHubの更新とは別です。
+
 つまみ・スライダー・テキストレシピでUNetを**キー単位**(要素マージ)でマージするComfyUIカスタムノード集。
 A1111拡張の [SuperMerger](https://github.com/hako-mikan/sd-webui-supermerger) の階層マージ/Elemental Mergeの**考え方**にインスパイアされた**独立実装**です(SuperMergerのコードは使用していません。無関係の別プロジェクトであり、本ノードの不具合を先方に問い合わせないでください)。
 
@@ -206,3 +210,58 @@ python_embeded\python.exe custom_nodes\ComfyUI-RecipeMerge\test_parser.py
 - MIT License — Copyright (c) 2026 galigali([LICENSE](LICENSE))
 - インスパイア元: [SuperMerger](https://github.com/hako-mikan/sd-webui-supermerger) (hako-mikan氏) の階層マージ/Elemental Mergeの考え方。本リポジトリはコードを共有しない独立実装で、先方とは無関係
 - 定番カーブ名(GRAD_V, FLAT_25等)は [Merge Block Weighted GUI](https://github.com/bbc-mc/sdweb-merge-block-weighted-gui) 発のコミュニティ慣用名(値は数式から生成)
+
+
+## AnimaのLoRA同士をマージする
+
+`advanced/model_merging` の **LoRA Merge (Anima Knobs)** を使います。
+同じAnimaアーキテクチャ用の通常LoRAを2つ指定してください。
+チェックポイント本体同士のマージや、SDXL用LoRAとAnima用LoRAの混合には使えません。
+
+- `B00`〜`B27`: `blocks.0`〜`blocks.27` のDiTブロック。
+- `BASE`: `llm_adapter`、埋め込み等、DiTブロック以外の拡散モデル部分。
+- `attn1`: `self_attn`、`attn2`: `cross_attn`、`ff`: `mlp`。
+  q/k/v/o_projはto_q/to_k/to_v/to_outサブつまみに対応します。
+- `lora_unet_blocks_...` のkohya形式、および
+  `diffusion_model.blocks....` のドット形式を取り込めます。
+  通常の `.lora_down/up.weight` と `.lora_A/B.weight` に対応します。
+  ドット形式はComfyUI標準ローダーの汎用kohyaキーに正規化して保存します。
+- 比率0はLoRA1、1はLoRA2。全体を半々にする場合はALLタブでSET 0.5。
+  テキストエンコーダ部分は `te_ratio` で別に指定します。
+- `model`を繋いで試し生成し、`save_file`をONにするとLoRAを保存します。
+  Anima対応版のComfyUIが必要です。SD系プリセットはAnimaの28階層へ比率を補間して適用します。
+- LoHa/LoKr/DoRA等の特殊形式は従来どおり対象外です。
+
+CPU回帰テスト: `python test_anima_merge.py`（PyTorchが必要）。
+キーの分類と、異なるrank/alphaのconcat結果が重み付きΔW和に一致することを検証します。
+実際のAnimaチェックポイントを読み込んだ画像生成は別途確認してください。
+
+
+### Animaのプリセット
+
+Animaノードでも全14種類の同梱プリセットを選択できます。
+SDのIN00〜M00〜OUT11の25点を深さ方向の曲線として扱い、B00〜B27の28点へ線形補間します。
+BASEはそのまま、欠けている階層・セルは0として扱います。サブ要素も換算対象です。
+これは比率配分の移植であり、SDとAnimaで画風・ポーズ等の効果が同じになる保証はありません。
+
+ユーザープリセットの選択、IMP、ドラッグ＆ドロップでも自動換算します。
+SAVE/EXPではAnima階層の値を保存・書き出しでき、再読み込み時には再換算されません。
+SD階層とAnima階層が混在したファイルは拒否します。Anima用プリセットをSDノードへ適用した場合もエラーを表示します。
+変換前の保存済みユーザープリセットは、選択しただけでは書き換えません。
+
+プリセット回帰テスト: `node test_anima_presets.mjs`。
+
+
+## Triangle LoRA Merge (Anima / SD)
+
+LoRA Mergeの3入力版を追加しました。A/B/Cの配合を三角形で指定し、階層・要素・サブ要素とTEに別配合を設定できます。
+Anima用途プリセット、配合JSONの保存・読み込み、試し生成、concat形式のLoRA保存に対応します。
+使い方と検証状況は [Triangle Mergeガイド](docs/triangle_merge.md) を参照してください。
+
+
+## Polygon LoRA Merge：任意数のLoRAを追加
+
+**Polygon LoRA Merge (Dynamic / Anima / SD)** はTriangleの任意入力数版です。
+「＋ LoRAを追加」で入力と頂点を増やし、削除で減らせます。3入力は三角形、4入力は四角形、5入力は五角形。
+階層・要素別配合、TE、Anima用途プリセット、配合JSON、試し生成とconcat保存に対応します。
+既存のTriangleノードも維持しています。使い方は [Polygon Mergeガイド](docs/polygon_merge.md) を参照してください。

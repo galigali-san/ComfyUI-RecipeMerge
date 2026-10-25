@@ -24,7 +24,7 @@ import fnmatch
 import re
 
 # ブロック指定トークン(大文字限定。要素名 attn/ff/norm 等と衝突させない)
-_BLOCK_TOKEN = re.compile(r"(IN|OUT|M|BASE)[0-9*]*$")
+_BLOCK_TOKEN = re.compile(r"(IN|OUT|B|M|BASE)[0-9*]*$")
 _NOT_PREFIX = re.compile(r"^NOT\s+")
 
 
@@ -54,7 +54,7 @@ def _normalize_block(tok, line_no):
         return "M00"
     if tok == "BASE":
         return "BASE"
-    m = re.match(r"(IN|OUT)(\d+)$", tok)
+    m = re.match(r"(IN|OUT|B)(\d+)$", tok)
     if m:
         return "%s%02d" % (m.group(1), int(m.group(2)))
     raise RecipeError(u"%d行目: ブロック名が不正です: %s" % (line_no, tok))
@@ -133,6 +133,8 @@ def block_label(key_unet):
     """UNetキー名(diffusion_model.プレフィックス除去済み)をブロック名にする。"""
     parts = key_unet.split(".")
     try:
+        if parts[0] == "blocks":
+            return "B%02d" % int(parts[1])
         if parts[0] == "input_blocks":
             return "IN%02d" % int(parts[1])
         if parts[0] == "middle_block":
@@ -162,7 +164,8 @@ def _rule_matches(rule, key_unet, label, key_segs):
     b = rule.blocks is None or any(
         fnmatch.fnmatchcase(label, p) for p in rule.blocks)
     e = rule.elements is None or any(
-        _element_matches(el, key_segs) for el in rule.elements)
+        (_element_matches(el, key_segs) or
+         _element_matches(el, key_unet.split("."))) for el in rule.elements)
     m = b and e
     return (not m) if rule.negate else m
 
@@ -170,7 +173,14 @@ def _rule_matches(rule, key_unet, label, key_segs):
 def ratio_for_key(key_unet, default, rules):
     """キー1つに適用する比率を決める。戻り値 (ratio, 勝ったRule or None)。"""
     label = block_label(key_unet)
-    key_segs = key_unet.split(".")
+    # Match Anima semantics without changing saved weight names.
+    semantic = key_unet.replace("self_attn", "attn1").replace("cross_attn", "attn2")
+    semantic = semantic.replace("mlp", "ff")
+    for src, dst in (("q_proj", "to_q"), ("k_proj", "to_k"),
+                     ("v_proj", "to_v"), ("o_proj", "to_out")):
+        semantic = semantic.replace(src, dst)
+    semantic = semantic.replace("ff.layer1", "ff.net.0").replace("ff.layer2", "ff.net.2")
+    key_segs = semantic.split(".")
     best = None
     for r in rules:
         if _rule_matches(r, key_unet, label, key_segs):

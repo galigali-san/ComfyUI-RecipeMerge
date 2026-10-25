@@ -1,0 +1,239 @@
+{
+  "type": "recipe_merge_matrix_preset",
+  "version": 1,
+  "name": "ANIMA_BALANCED_50",
+  "matrix": {
+    "BASE": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B00": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B01": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B02": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B03": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B04": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B05": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B06": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B07": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B08": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B09": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B10": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B11": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B12": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B13": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B14": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B15": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B16": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B17": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B18": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B19": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B20": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B21": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B22": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B23": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B24": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B25": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B26": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    },
+    "B27": {
+      "attn1": 0.5,
+      "attn2": 0.5,
+      "ff": 0.5,
+      "norm": 0.5,
+      "proj": 0.5,
+      "other": 0.5
+    }
+  }
+}

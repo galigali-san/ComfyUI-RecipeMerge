@@ -1,0 +1,239 @@
+{
+  "type": "recipe_merge_matrix_preset",
+  "version": 1,
+  "name": "ANIMA_PAINT_FACE_GUARD",
+  "matrix": {
+    "BASE": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B00": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B01": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B02": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B03": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B04": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B05": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B06": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B07": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B08": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B09": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B10": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B11": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B12": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B13": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B14": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B15": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B16": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B17": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B18": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B19": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B20": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B21": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B22": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B23": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B24": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B25": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B26": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    },
+    "B27": {
+      "attn1": 0,
+      "attn2": 0,
+      "ff": 0.4,
+      "norm": 0,
+      "proj": 0,
+      "other": 0
+    }
+  }
+}
