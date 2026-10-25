@@ -5,12 +5,17 @@ Triangle LoRA Mergeの任意入力数版です。既存のTriangleノードと�
 
 ## 更新とノード追加（Windows）
 
+通常配布先は`main`です。Git経由で導入した場合はComfyUI-Manager等のGit更新機能を使用できます。
+更新後はComfyUIを再起動してブラウザを再読み込みしてください。
+開発用ブランチを使用していた場合は、最初に一度だけ`main`へ切り替えます。
+以下は手動更新を行う場合の手順です。
+
 `ComfyUI/custom_nodes/ComfyUI-RecipeMerge`で以下を実行します。
 
 ```bat
 git fetch origin
-git switch feat/anima-lora-merge
-git pull --ff-only origin feat/anima-lora-merge
+git switch main
+git pull --ff-only origin main
 ```
 
 ComfyUIを完全に終了して再起動し、ブラウザでCtrl+F5を押します。

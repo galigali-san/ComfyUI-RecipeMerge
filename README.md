@@ -1,5 +1,9 @@
 # ComfyUI-RecipeMerge
 
+> **v1.6.0**: Anima LoRA対応、用途別プリセット、Triangle/Polygon LoRA Mergeを標準の`main`に統合しました。
+> Git版はComfyUI-Manager等の通常のGit更新機能で取得できます。更新後はComfyUIを再起動してください。
+> 開発ブランチを使っていた場合は一度だけ`main`へ戻してください。Registry向け公開はGitHubの更新とは別です。
+
 つまみ・スライダー・テキストレシピでUNetを**キー単位**(要素マージ)でマージするComfyUIカスタムノード集。
 A1111拡張の [SuperMerger](https://github.com/hako-mikan/sd-webui-supermerger) の階層マージ/Elemental Mergeの**考え方**にインスパイアされた**独立実装**です(SuperMergerのコードは使用していません。無関係の別プロジェクトであり、本ノードの不具合を先方に問い合わせないでください)。
 
