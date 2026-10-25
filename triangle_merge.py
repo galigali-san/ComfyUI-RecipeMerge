@@ -13,9 +13,9 @@ import comfy.utils
 from .recipe_parser import Rule, ratio_for_key
 
 
-def weights(value):
-    if not isinstance(value, (list, tuple)) or len(value) != 3:
-        raise ValueError('配合は[A, B, C]の3数値で指定してください')
+def weights(value, count=3):
+    if not isinstance(value, (list, tuple)) or len(value) != count:
+        raise ValueError('配合にはLoRA数と同じ%d個の数値が必要です' % count)
     try:
         values = [float(v) for v in value]
     except (ValueError, TypeError):
@@ -28,11 +28,11 @@ def weights(value):
     return tuple(v / total for v in values)
 
 
-def recipe_rules(data):
+def recipe_rules(data, count=3):
     if not isinstance(data, dict):
-        raise ValueError('triangleはJSONオブジェクトで指定してください')
-    default = weights(data.get('global', [1, 0, 0]))
-    te = weights(data.get('te', default))
+        raise ValueError('配合はJSONオブジェクトで指定してください')
+    default = weights(data.get('global', [1] + [0] * (count - 1)), count)
+    te = weights(data.get('te', default), count)
     overrides = data.get('overrides', {})
     if not isinstance(overrides, dict):
         raise ValueError('overridesはオブジェクトで指定してください')
@@ -49,7 +49,7 @@ def recipe_rules(data):
             # Extra specificity for sub-elements (parent must not overwrite a child).
             rule = Rule(None if block == 'ALL' else [block],
                         None if element == 'ALL' else (['proj_in', 'proj_out'] if element == 'proj' else [element]), False,
-                        weights(cells[element]), 0, block + ':' + element)
+                        weights(cells[element], count), 0, block + ':' + element)
             rule.specificity = (100 if block != 'ALL' else 0) + (0 if element == 'ALL' else 1 + element.count('.'))
             rules.append(rule)
     return default, te, rules
@@ -58,7 +58,11 @@ def recipe_rules(data):
 def merge_groups(groups, default, te, rules):
     from . import _lora_name_to_unet_key
     out = {}
-    counts = [0, 0, 0]
+    default = weights(default, len(groups))
+    te = weights(te, len(groups))
+    for rule in rules:
+        rule.ratio = weights(rule.ratio, len(groups))
+    counts = [0] * len(groups)
     max_rank = 0
     for base in sorted(set().union(*(g.keys() for g in groups))):
         if base.startswith('lora_unet_'):
@@ -113,6 +117,7 @@ def merge_groups(groups, default, te, rules):
 
 
 class TriangleLoraMerge:
+    MERGE_KIND = 'triangle'
     @classmethod
     def INPUT_TYPES(cls):
         return {'required': {
@@ -135,18 +140,25 @@ class TriangleLoraMerge:
 
     def merge(self, lora_a, lora_b, lora_c, architecture, triangle, filename,
               save_file, model=None, clip=None):
+        return self.merge_sources([lora_a, lora_b, lora_c], architecture, triangle,
+                                  filename, save_file, model, clip)
+
+    def merge_sources(self, names, architecture, recipe, filename, save_file,
+                      model=None, clip=None):
         from . import _normalize_anima_keys, _group_lora_keys, _diffusers_to_kohya
+        if not isinstance(names, list) or not names or any(not isinstance(n, str) or not n.strip() for n in names):
+            raise ValueError('LoRAを1つ以上選択してください')
         if not save_file and model is None and clip is None:
             raise ValueError('試し生成用のmodel/clipを接続するか、save_fileをONにしてください')
         if architecture not in ('Anima', 'SD'):
             raise ValueError('未対応のarchitectureです')
-        data = json.loads(triangle)
-        default, te, rules = recipe_rules(data)
+        data = json.loads(recipe)
+        default, te, rules = recipe_rules(data, len(names))
         for rule in rules:
             if rule.blocks and ((architecture == 'Anima' and rule.blocks[0].startswith(('IN', 'OUT', 'M'))) or (architecture == 'SD' and re.fullmatch(r'B\d{2}', rule.blocks[0]))):
                 raise ValueError('階層の指定がarchitectureと一致しません: ' + rule.text)
         groups = []
-        for name in (lora_a, lora_b, lora_c):
+        for name in names:
             sd = comfy.utils.load_torch_file(folder_paths.get_full_path_or_raise('loras', name), safe_load=True)
             sd = _normalize_anima_keys(sd)
             converted = {}
@@ -197,12 +209,39 @@ class TriangleLoraMerge:
             while os.path.exists(path):
                 path = os.path.join(directory, '%s_%d.safetensors' % (safe, n))
                 n += 1
-            metadata = {'recipemerge': json.dumps({'type': 'triangle', 'loras': [lora_a, lora_b, lora_c], 'architecture': architecture, 'triangle': data}, ensure_ascii=False)}
+            metadata = {'recipemerge': json.dumps({'type': self.MERGE_KIND, 'loras': names, 'architecture': architecture, 'recipe': data}, ensure_ascii=False)}
             comfy.utils.save_torch_file(out, path, metadata=metadata)
             saved = '保存: ' + os.path.basename(path)
-        report = '\n'.join([saved, '全体 A/B/C: ' + '/'.join('%.2f%%' % (v*100) for v in default),
-                            'TE A/B/C: ' + '/'.join('%.2f%%' % (v*100) for v in te),
-                            '使用キー A/B/C: %s / 最大rank: %d' % (counts, rank),
+        report = '\n'.join([saved, '全体（入力順）: ' + '/'.join('%.2f%%' % (v*100) for v in default),
+                            'TE（入力順）: ' + '/'.join('%.2f%%' % (v*100) for v in te),
+                            '使用キー（入力順）: %s / 最大rank: %d' % (counts, rank),
                             '片側にしかないキーは指定比率のまま保持（欠けた側へ再配分しません）'] + applied +
                            [r.text + ': %d keys%s' % (r.hits, ' ★一致なし' if not r.hits else '') for r in rules])
         return new_model, new_clip, report
+
+
+class PolygonLoraMerge(TriangleLoraMerge):
+    MERGE_KIND = 'polygon'
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {'required': {
+            'lora_catalog': (folder_paths.get_filename_list('loras'),),
+            'architecture': (['Anima', 'SD'],),
+            'polygon': ('STRING', {'default': '{"loras":[],"global":[],"overrides":{}}', 'multiline': True}),
+            'filename': ('STRING', {'default': 'polygon_lora'}),
+            'save_file': ('BOOLEAN', {'default': False}),
+        }, 'optional': {'model': ('MODEL',), 'clip': ('CLIP',)}}
+
+    DESCRIPTION = ('LoRAを任意数追加・削除する多角形マージ。頂点ごとにLoRAを指定。'
+                   '階層・要素別配合、TE、試し生成、concat保存に対応。4入力以上の自由配合は数値欄でも指定できます。')
+
+    def merge(self, lora_catalog, architecture, polygon, filename, save_file,
+              model=None, clip=None):
+        data = json.loads(polygon)
+        if not isinstance(data, dict):
+            raise ValueError('polygonはJSONオブジェクトで指定してください')
+        names = data.get('loras')
+        if not isinstance(names, list) or not names:
+            raise ValueError('「LoRAを追加」から入力を選択してください')
+        return self.merge_sources(names, architecture, polygon, filename,
+                                  save_file, model, clip)

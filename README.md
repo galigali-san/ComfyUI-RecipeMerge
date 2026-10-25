@@ -253,3 +253,11 @@ SD階層とAnima階層が混在したファイルは拒否します。Anima用�
 LoRA Mergeの3入力版を追加しました。A/B/Cの配合を三角形で指定し、階層・要素・サブ要素とTEに別配合を設定できます。
 Anima用途プリセット、配合JSONの保存・読み込み、試し生成、concat形式のLoRA保存に対応します。
 使い方と検証状況は [Triangle Mergeガイド](docs/triangle_merge.md) を参照してください。
+
+
+## Polygon LoRA Merge：任意数のLoRAを追加
+
+**Polygon LoRA Merge (Dynamic / Anima / SD)** はTriangleの任意入力数版です。
+「＋ LoRAを追加」で入力と頂点を増やし、削除で減らせます。3入力は三角形、4入力は四角形、5入力は五角形。
+階層・要素別配合、TE、Anima用途プリセット、配合JSON、試し生成とconcat保存に対応します。
+既存のTriangleノードも維持しています。使い方は [Polygon Mergeガイド](docs/polygon_merge.md) を参照してください。

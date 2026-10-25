@@ -636,12 +636,13 @@ class AnimaLoraMergeMatrix(LoraMergeMatrix):
                    u"同じAnimaアーキテクチャの通常LoRA同士を指定してください。")
 
 
-from .triangle_merge import TriangleLoraMerge
+from .triangle_merge import TriangleLoraMerge, PolygonLoraMerge
 
 WEB_DIRECTORY = "./web"
 
 NODE_CLASS_MAPPINGS = {
     "TriangleLoraMerge": TriangleLoraMerge,
+    "PolygonLoraMerge": PolygonLoraMerge,
     "ElementalMergeRecipe": ElementalMergeRecipe,
     "BlockSlidersMerge": BlockSlidersMerge,
     "ElementalMatrixMerge": ElementalMatrixMerge,
@@ -653,6 +654,7 @@ NODE_CLASS_MAPPINGS = {
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "TriangleLoraMerge": "Triangle LoRA Merge (Anima / SD)",
+    "PolygonLoraMerge": "Polygon LoRA Merge (Dynamic / Anima / SD)",
     "ElementalMergeRecipe": "Elemental Merge (Recipe)",
     "BlockSlidersMerge": "Block Sliders Merge (MBW)",
     "ElementalMatrixMerge": "Elemental Matrix Merge (Knobs)",
